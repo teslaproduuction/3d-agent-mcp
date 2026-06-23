@@ -24,8 +24,7 @@ AI-powered multi-agent pipeline for generating 3D printable models from text des
 
 ## Demo
 
-> 🎬 **[Watch demo video on YouTube →](https://youtu.be/YOUR_VIDEO_ID)**
-> *(replace link after uploading your demo)*
+<video src="https://github.com/teslaproduuction/3d-agent-mcp/raw/main/docs/demo.mp4" controls width="100%"></video>
 
 ### Generated Examples
 

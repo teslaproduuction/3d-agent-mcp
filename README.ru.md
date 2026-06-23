@@ -23,7 +23,7 @@
 
 ## Демо
 
-> 🎬 **[Смотреть демо-видео →](https://youtu.be/YOUR_VIDEO_ID)**
+<video src="https://github.com/teslaproduuction/3d-agent-mcp/raw/main/docs/demo.mp4" controls width="100%"></video>
 
 ### Примеры генерации
 
