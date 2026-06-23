@@ -12,6 +12,9 @@ AI-powered multi-agent pipeline for generating 3D printable models from text des
 [![Gradio](https://img.shields.io/badge/UI-Gradio-FF7C00?logo=gradio)](https://gradio.app)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://docker.com)
 [![AutoGen](https://img.shields.io/badge/AutoGen-Multi--Agent-FF4B4B)](https://github.com/microsoft/autogen)
+[![GHCR](https://img.shields.io/badge/ghcr.io-image-0D1117?logo=github)](https://github.com/teslaproduuction/3d-agent-mcp/pkgs/container/3d-agent-mcp)
+
+🇬🇧 English | [🇷🇺 Русский](README.ru.md)
 
 <img src="docs/images/v2_text_to_3d_pipeline.png" alt="Pipeline" width="90%"/>
 
@@ -142,6 +145,18 @@ AI Analysis:
 ---
 
 ## Quick Start
+
+### Option 0 — Docker image (fastest)
+
+```bash
+docker pull ghcr.io/teslaproduuction/3d-agent-mcp:latest
+
+cp .env.example .env
+# Fill in API keys
+
+docker-compose up -d
+# → http://localhost:7860
+```
 
 ### Option 1 — UV (recommended, 10–100× faster than pip)
 
