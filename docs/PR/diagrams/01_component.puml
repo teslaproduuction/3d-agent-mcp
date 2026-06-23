@@ -1,0 +1,70 @@
+@startuml 01_component
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam componentStyle rectangle
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam ArrowColor #444444
+skinparam ComponentBorderColor #555555
+skinparam PackageBorderColor #777777
+skinparam PackageBackgroundColor #F5F5F5
+
+title Компонентная диаграмма системы 3dAgentMCP
+
+package "Интерфейсный слой" as UI #E8F4FD {
+  [Gradio Web UI\n:7860] as GradioUI
+  [MCP Server\n(Claude Desktop / Cursor)] as MCPServer
+  [Nginx Proxy\n:80/443] as Nginx
+}
+
+package "Слой оркестрации" as Orch #FFF3E0 {
+  [AutoGenCoordinator\n(GroupChat)] as AutoGen
+  [CoordinatorAgent\n(Legacy)] as Coord
+}
+
+package "Агентный слой" as Agents #E8F5E9 {
+  [PlannerAgent\n(декомпозиция)] as Planner
+  [ImageGenerationAgent\n(2D превью)] as ImgAgent
+  [GenerationAgent\n(3D модель)] as Gen3D
+  [PostProcessingAgent\n(GCI анализ)] as PostProc
+  [VerificationAgent\n(QA)] as Verify
+}
+
+package "Слой AI-моделей" as AIModels #FCE4EC {
+  [Ollama\nQwen 2.5 32B\n:11434] as Ollama
+  [ComfyUI / FLUX\nFLUX.1-dev-fp8\n:9188] as FLUX
+  [Hunyuan3D-2\nfull model\n:8000] as H3D
+  [Hunyuan3D-2mv\nmultiview\n:8001] as H3DMV
+}
+
+package "Слой хранения" as Storage #F3E5F5 {
+  database "SQLite\nmetrics.db" as MetricsDB
+  folder "outputs/\nmodels/" as Models
+  folder "outputs/\npreviews/" as Previews
+  [Redis\nСессии] as Redis
+}
+
+Nginx --> GradioUI
+GradioUI --> AutoGen
+GradioUI --> Coord
+MCPServer --> AutoGen
+
+AutoGen --> Planner
+AutoGen --> ImgAgent
+AutoGen --> Gen3D
+AutoGen --> PostProc
+AutoGen --> Verify
+
+Planner --> Ollama : "Qwen 2.5 32B"
+ImgAgent --> FLUX : "text-to-image"
+Gen3D --> H3D : "image-to-3D"
+Gen3D --> H3DMV : "multiview-to-3D"
+PostProc --> Ollama : "GCI reasoning"
+Verify --> Ollama : "QA check"
+
+PostProc --> MetricsDB : "запись метрик"
+Gen3D --> Models : "GLB / STL"
+ImgAgent --> Previews : "PNG превью"
+GradioUI --> Redis : "состояние сессии"
+
+@enduml

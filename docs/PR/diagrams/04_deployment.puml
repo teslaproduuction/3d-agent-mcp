@@ -1,0 +1,62 @@
+@startuml 04_deployment
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam NodeBorderColor #555555
+skinparam NodeBackgroundColor #E3F2FD
+skinparam ComponentBorderColor #666666
+
+title Диаграмма развёртывания: сервер 10.0.60.112
+
+node "Сервер Ubuntu 22.04" as Server {
+  note as HW
+    AMD EPYC 9754, 128 cores
+    RAM: 125 GB
+    Disk: 97 GB SSD
+    NVIDIA H800 PCIe, 80 GB VRAM
+  end note
+
+  node "Docker Network: 3d-agent-net" as DockerNet {
+
+    component "3d-agent-nginx\n[nginx:1.27-alpine]\n:80 / :443" as Nginx
+
+    component "3d-agent-app\n[Gradio Application]\n:7860 (внутр.)" as App
+
+    component "3d-agent-ollama\n[Qwen 2.5 32B]\n:11434" as Ollama
+
+    component "3d-agent-flux\n[ComfyUI + FLUX.1-dev-fp8]\n:9188" as FLUX
+
+    component "3d-agent-hunyuan3d\n[Hunyuan3D-2 full]\n:8000" as H3D
+
+    component "3d-agent-hunyuan3d-mv\n[Hunyuan3D-2mv]\n:8001" as H3DMV
+
+    component "3d-agent-redis\n[Redis 7]\n(внутр.)" as Redis
+
+    component "3d-agent-admin\n[Webhook]\n:9001" as Admin
+
+    database "ollama-data\n[Docker Volume]" as OllamaVol
+    database "flux-data\n[Docker Volume]" as FluxVol
+    database "hunyuan3d-cache\n[Docker Volume]" as H3DVol
+    database "outputs/\n[Bind Mount]" as Outputs
+  }
+}
+
+actor "Пользователь" as User
+component "Claude Desktop\nCursor IDE" as Claude
+
+User --> Nginx : "HTTPS :443"
+Claude --> Nginx : "MCP over HTTP"
+Nginx --> App : "proxy :7860"
+App --> Ollama : "REST API"
+App --> FLUX : "ComfyUI API"
+App --> H3D : "REST :8081"
+App --> H3DMV : "REST :8081"
+App --> Redis : "сессии"
+Ollama --> OllamaVol
+FLUX --> FluxVol
+H3D --> H3DVol
+H3DMV --> H3DVol
+App --> Outputs : "GLB / STL / PNG"
+
+@enduml

@@ -1,0 +1,67 @@
+@startuml 02_sequence
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam sequenceArrowThickness 2
+skinparam ParticipantPadding 10
+
+title Диаграмма последовательности: полный цикл генерации 3D-модели
+
+actor "Пользователь" as User
+participant "Gradio UI /\nMCP Server" as UI
+participant "AutoGen\nCoordinator" as Coord
+participant "Planner\nAgent" as Planner
+participant "Image\nAgent" as ImgA
+participant "Generation\nAgent" as GenA
+participant "PostProcess\nAgent" as PostA
+participant "Verification\nAgent" as VerA
+database "metrics.db" as DB
+
+User -> UI : "Описание объекта\n(текст)"
+activate UI
+
+UI -> Coord : generate_3d_model(description)
+activate Coord
+
+Coord -> Planner : decompose_task(description)
+activate Planner
+Planner -> Planner : Qwen 2.5 32B:\nрефайнинг промпта
+Planner --> Coord : refined_plan{}
+deactivate Planner
+
+Coord -> ImgA : generate_preview(plan)
+activate ImgA
+ImgA -> ImgA : FLUX.1-dev-fp8:\nгенерация 2D PNG
+ImgA -> ImgA : zero123:\n4 ракурса (multiview)
+ImgA --> Coord : preview_paths[]
+deactivate ImgA
+
+Coord -> GenA : generate_3d(previews, multiview=True)
+activate GenA
+GenA -> GenA : Hunyuan3D-2mv:\nrecon. из 4 видов
+note right: ~90-150 сек
+GenA --> Coord : model.glb
+deactivate GenA
+
+Coord -> PostA : analyze_and_optimize(model.glb)
+activate PostA
+PostA -> PostA : Расчёт GCI\n(trimesh)
+PostA -> PostA : 24 ориентации:\noptimal_face
+PostA -> PostA : Qwen 2.5: обоснование
+PostA -> DB : INSERT metrics
+PostA --> Coord : {gci, orientation, supports, reasoning}
+deactivate PostA
+
+Coord -> VerA : verify_result(model, analysis)
+activate VerA
+VerA --> Coord : approved / suggestions
+deactivate VerA
+
+Coord --> UI : {model_path, gci, reasoning, stl}
+deactivate Coord
+
+UI --> User : 3D модель + анализ
+deactivate UI
+
+@enduml

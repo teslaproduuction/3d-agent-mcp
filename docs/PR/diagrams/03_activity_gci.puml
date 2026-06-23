@@ -1,0 +1,71 @@
+@startuml 03_activity_gci
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam ActivityBorderColor #555555
+skinparam ActivityBackgroundColor #E8F5E9
+skinparam DecisionBorderColor #FF8F00
+skinparam DecisionBackgroundColor #FFF8E1
+
+title Алгоритм расчёта индекса геометрической сложности GCI
+
+start
+
+:Загрузка 3D-модели (.glb / .stl);
+note right: trimesh.load(path)
+
+:Извлечение геометрических параметров;
+note right
+  Nf — количество граней
+  Av — количество вершин
+  Sv — площадь поверхности (см²)
+  Vt — полный объём (см³)
+  C — суммарная длина рёбер (см)
+  L — характерный размер (max extent, см)
+end note
+
+:Определение внутренних полостей;
+note right
+  Vc = Vol(convex_hull) − Vol(mesh)
+  Если Vc < 0: Vc = 0
+end note
+
+:Расчёт компонент GCI;
+
+note right
+  GCI_surface  = w₁ · (Nf / Sv)
+  GCI_topology = w₂ · (C / L)
+  GCI_cavity   = w₃ · (Vc / Vt)
+
+  w₁ = 0.0002
+  w₂ = 0.0028
+  w₃ = 0.9970
+end note
+
+:GCI_total = GCI_surface + GCI_topology + GCI_cavity;
+
+if (GCI_total < 0.5?) then (Да)
+  :Простая геометрия\nMAE < 0.3 мм\n→ Прямая печать;
+  :Стратегия опор: none;
+elseif (GCI_total < 0.8?) then (Да)
+  :Средняя сложность\nMAE ≈ 0.8–1.2 мм\n→ Минимальная поддержка;
+  :Стратегия опор: minimal;
+else (Нет)
+  :Высокая сложность\nMAE > 1.5 мм\n→ Рекомендация CAD-редактирования;
+  :Стратегия опор: arc / standard;
+endif
+
+:Оптимизация ориентации;
+note right
+  Тест 24 стандартных ориентаций
+  Критерий: min(overhangs) + max(base_area)
+end note
+
+:LLM генерирует обоснование (Qwen 2.5 32B);
+
+:Сохранение в metrics.db\n(GCI, ориентация, опоры, время, ресурсы);
+
+stop
+
+@enduml

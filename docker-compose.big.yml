@@ -1,0 +1,35 @@
+# Big model profile for H800 (81GB VRAM)
+# Usage: docker compose -f docker-compose.yml -f docker-compose.big.yml up -d
+#
+# vs default:
+#   Qwen:      7b  → 32b   (~20GB VRAM)
+#   FLUX:      schnell-fp8 → dev-fp8 + schnell (~25GB VRAM)
+#   Hunyuan3D: 2mini → 2 full (~20GB VRAM)
+#   Total VRAM: ~56GB / 81GB
+#
+# To switch back: docker compose up -d (without -f docker-compose.big.yml)
+
+services:
+
+  # Pull qwen2.5:32b instead of 7b
+  ollama-init:
+    entrypoint: ["/bin/sh", "-c",
+      "ollama list | grep -q 'qwen2.5:32b' && echo 'Already present' || (ollama pull qwen2.5:32b && echo 'Done')"]
+
+  # FLUX dev-fp8 (much better quality than schnell) + keep schnell
+  flux:
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - MODELS_DOWNLOAD=schnell,dev
+      - LOW_VRAM=false
+      - CLI_ARGS=--listen 0.0.0.0
+
+  # Hunyuan3D-2 full model — downloads on startup via entrypoint.sh
+  hunyuan3d:
+    environment:
+      - MODEL_PATH=tencent/Hunyuan3D-2
+      - HF_TOKEN=${HF_TOKEN:-}
+      - HF_HOME=/app/cache
+      - TRANSFORMERS_CACHE=/app/cache
+      - U2NET_HOME=/app/cache/u2net
+      - HF_HUB_DISABLE_XET=1

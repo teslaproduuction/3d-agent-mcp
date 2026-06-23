@@ -1,0 +1,102 @@
+@startuml 05_classes
+!theme plain
+skinparam backgroundColor #FAFAFA
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam ClassBorderColor #555555
+skinparam ClassBackgroundColor #F8F9FA
+skinparam ClassHeaderBackgroundColor #E3F2FD
+
+title Диаграмма классов: агентная система и метрики
+
+abstract class BaseAgent {
+  #config: dict
+  #llm_client: LLMClient
+  +run(task: dict): dict
+  #_call_llm(prompt: str): str
+}
+
+class AutoGenCoordinator {
+  -group_chat: GroupChat
+  -agents: List[Agent]
+  +generate(description: str): GenerationResult
+  +select_preview(candidates: List): str
+}
+
+class PlannerAgent {
+  -model: str = "qwen2.5:32b"
+  +decompose(description: str): Plan
+  +refine_prompt(text: str): str
+  +validate_printability(plan: Plan): bool
+}
+
+class ImageGenerationAgent {
+  -provider: str = "local"
+  -comfyui_url: str
+  +generate_preview(prompt: str): Path
+  +generate_multiview(prompt: str): List[Path]
+}
+
+class GenerationAgent {
+  -hunyuan_url: str
+  -hunyuan_mv_url: str
+  +generate_from_image(image: Path): Path
+  +generate_multiview(images: List[Path]): Path
+}
+
+class IntelligentPostProcessingAgent {
+  -llm: LLMClient
+  +analyze_and_optimize(model: Path): Analysis
+  +calculate_gci(mesh): GCIResult
+  +optimize_orientation(mesh): Orientation
+}
+
+class VerificationAgent {
+  +verify(model: Path, analysis: Analysis): bool
+  +suggest_improvements(): List[str]
+}
+
+class MetricsCollector {
+  -db_path: str
+  -conn: Connection
+  +record(data: GenerationRecord)
+  +get_statistics(): DataFrame
+}
+
+class MeshAnalyzer {
+  +{static} compute_gci(mesh): float
+  +{static} detect_cavities(mesh): float
+  +{static} check_manifold(mesh): bool
+  +{static} find_optimal_orientation(mesh): array
+}
+
+class GenerationRecord <<dataclass>> {
+  +session_id: str
+  +timestamp: datetime
+  +model_name: str
+  +time_image_gen: float
+  +time_3d_gen: float
+  +time_postprocess: float
+  +gci_total: float
+  +face_count: int
+  +peak_vram_gb: float
+  +peak_cpu_pct: float
+}
+
+BaseAgent <|-- PlannerAgent
+BaseAgent <|-- ImageGenerationAgent
+BaseAgent <|-- GenerationAgent
+BaseAgent <|-- IntelligentPostProcessingAgent
+BaseAgent <|-- VerificationAgent
+
+AutoGenCoordinator "1" *-- "1" PlannerAgent
+AutoGenCoordinator "1" *-- "1" ImageGenerationAgent
+AutoGenCoordinator "1" *-- "1" GenerationAgent
+AutoGenCoordinator "1" *-- "1" IntelligentPostProcessingAgent
+AutoGenCoordinator "1" *-- "1" VerificationAgent
+
+IntelligentPostProcessingAgent --> MetricsCollector : "записывает"
+IntelligentPostProcessingAgent --> MeshAnalyzer : "использует"
+MetricsCollector --> GenerationRecord : "хранит"
+
+@enduml

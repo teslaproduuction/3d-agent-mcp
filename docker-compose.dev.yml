@@ -1,0 +1,148 @@
+# Dev-режим: только AI-сервисы в Docker, приложение запускается локально
+# Запуск: docker-compose -f docker-compose.dev.yml up -d
+# Приложение: python main.py   (использует localhost для всех сервисов)
+# Полный стек в Docker: docker-compose up -d
+
+services:
+  # LLM — Ollama с GPU
+  ollama:
+    image: ollama/ollama:latest
+    container_name: 3d-agent-ollama-dev
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_KEEP_ALIVE=5m
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - 3d-agent-dev
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 15s
+
+  # One-shot: скачивает qwen2.5:7b при первом запуске
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: 3d-agent-ollama-dev-init
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["/bin/sh", "-c", "ollama list | grep -q 'qwen2.5:7b' && echo 'Already present' || (ollama pull qwen2.5:7b && echo 'Done')"]
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - 3d-agent-dev
+    restart: "no"
+
+  # Image генерация — FLUX.1-schnell via ComfyUI
+  flux:
+    image: frefrik/comfyui-flux:cu128
+    container_name: 3d-agent-flux
+    ports:
+      - "8188:8188"
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - MODELS_DOWNLOAD=schnell
+      - LOW_VRAM=true
+      - CLI_ARGS=--listen 0.0.0.0 --lowvram
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    volumes:
+      - ./docker/comfyui/manager-config.ini:/app/ComfyUI/user/__manager/config.ini:ro
+      - flux-data:/app
+      - ./outputs/flux:/app/output
+    restart: unless-stopped
+    networks:
+      - 3d-agent-dev
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8188/system_stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 300s
+
+  # 3D генерация — Hunyuan3D-2 API server
+  hunyuan3d:
+    build:
+      context: ./docker/hunyuan3d
+      dockerfile: Dockerfile
+    container_name: 3d-agent-hunyuan3d
+    ports:
+      - "8000:8081"
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - HF_HOME=/app/cache
+      - TRANSFORMERS_CACHE=/app/cache
+      - U2NET_HOME=/app/cache/u2net
+      - HF_HUB_DISABLE_XET=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    # Без --enable_tex: не грузим полную модель tencent/Hunyuan3D-2, только mini shape
+    command: ["python", "api_server.py", "--host", "0.0.0.0", "--port", "8081",
+              "--model_path", "tencent/Hunyuan3D-2mini"]
+    volumes:
+      - hunyuan3d-cache:/app/cache
+      - ./outputs/hunyuan3d:/app/outputs
+    restart: unless-stopped
+    networks:
+      - 3d-agent-dev
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8081/openapi.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+  # Session state persistence — приложение читает/пишет состояние сюда
+  redis:
+    image: redis:7-alpine
+    container_name: 3d-agent-redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - 3d-agent-dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  3d-agent-dev:
+    driver: bridge
+
+volumes:
+  ollama-data:
+    driver: local
+  hunyuan3d-cache:
+    driver: local
+  flux-data:
+    driver: local
+  redis-data:
+    driver: local

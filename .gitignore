@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Project specific
+outputs/
+cache/
+logs/
+*.log
+
+# API keys and secrets
+.env
+config.yaml  # Only ignore if contains actual keys, otherwise keep template
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# 3D model files (optional - uncomment to exclude generated models)
+# *.stl
+# *.obj
+# *.glb
+# *.fbx
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Distribution
+*.whl
+.claude/worktrees/
+.claude/worktrees/nice-chatterjee
+
+# Личные данные — не в репозиторий
+docs/VKR/Умник/
+docs/VKR/Умник
+docs/VKR/Документы для сдачи/
+docs/VKR/Документы для сдачи
+docs/Умник/
+docs/Умник

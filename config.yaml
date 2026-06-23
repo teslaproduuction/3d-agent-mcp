@@ -1,0 +1,192 @@
+# Feature flag for AutoGen migration
+use_autogen: true  # Set to true to use AutoGen agents instead of legacy
+api_keys:
+  tripo: ""  # Get from https://platform.tripo3d.ai
+  meshy: ""  # Optional: Get from https://www.meshy.ai
+  openai: ""  # For DALL-E 3 and GPT-4
+  anthropic: ""  # For Claude
+  replicate: ""  # For SDXL and Flux
+
+# LLM Configuration for AutoGen
+llm:
+  default_provider: "ollama"
+
+  # Cloud providers
+  cloud:
+    openai:
+      enabled: false
+      model: "gpt-5-mini"  # 🆕 NEW! GPT-5 Mini: $0.25/$2.00 per 1M tokens
+      # Alternatives:
+      # "gpt-5" (main, $1.25/$10 per 1M) - State-of-the-art, 50% cheaper than GPT-4o
+      # "gpt-4o-mini" ($0.15/$0.60 per 1M) - Still good, slightly cheaper
+      # "o3-mini" - Reasoning model, best for STEM/coding
+      # "gpt-4" - Legacy, expensive
+      api_key_env: "OPENAI_API_KEY"
+    anthropic:
+      enabled: false
+      model: "claude-3-5-sonnet-20241022"
+      api_key_env: "ANTHROPIC_API_KEY"
+    google:
+      enabled: false
+      model: "gemini-2.0-flash-exp"  # 33% cheaper than GPT-4o-mini, very fast
+      api_key_env: "GOOGLE_API_KEY"
+
+  # Local models
+  local:
+    enabled: true
+    ollama_base_url: "http://localhost:11434/v1"
+    ollama_models: ["qwen2.5:32b", "qwen2.5:7b", "qwen2.5:3b", "qwen2.5:1.5b", "llama3.2:1b"]
+
+  # Custom OpenAI-compatible endpoint
+  custom:
+    enabled: false
+    base_url: ""
+    model: ""
+    api_key: ""
+
+  # Hybrid mode (different models for different agents)
+  hybrid:
+    enabled: false
+    agent_models:
+      planner: {provider: "openai", model: "gpt-5-mini"}  # 🆕 GPT-5 Mini: Fast, cheap, smart
+      postprocessing: {provider: "openai", model: "o3-mini"}  # 🆕 Reasoning model for analysis
+      verification: {provider: "anthropic", model: "claude-3-5-sonnet-20241022"}
+      image_gen: {provider: "google", model: "gemini-2.0-flash-exp"}  # Cheapest option
+
+default_settings:
+  # Image Generation (2D Preview)
+  image_generation:
+    enabled: true
+    provider: "local"  # gpt-image-1.5 | dalle3 | sdxl | flux | local
+    style: "realistic 3D render, product design"
+    size: "1024x1024"
+
+  # Local Image Models (alternative to cloud APIs)
+  local_image_models:
+    enabled: true
+    available_models:
+      - name: "flux-dev"
+        display_name: "FLUX.1-dev (ComfyUI)"
+        description: "Black Forest Labs FLUX.1-dev via ComfyUI — высшее качество, FP8 ~22GB VRAM"
+        mode: "comfyui"
+        docker_url: "http://localhost:8188"
+        api_endpoint: "/prompt"
+        ckpt_name: "flux1-dev-fp8.safetensors"
+        device: "cuda"
+        use_half_precision: true
+        supports_editing: false
+        supports_multiview: false
+      - name: "flux-schnell"
+        display_name: "FLUX.1-schnell (ComfyUI)"
+        description: "Black Forest Labs FLUX.1-schnell via ComfyUI — быстрее, FP8 ~17GB VRAM"
+        mode: "comfyui"
+        docker_url: "http://localhost:8188"
+        api_endpoint: "/prompt"
+        ckpt_name: "flux1-schnell-fp8.safetensors"
+        device: "cuda"
+        use_half_precision: true
+        supports_editing: false
+        supports_multiview: false
+    default_model: "flux-schnell"
+
+  # 3D Generation
+  generation:
+    api_provider: "local"  # tripo | meshy | local
+    use_image_to_3d: true  # Use image-to-3D when preview available
+    model_version: "v2.0-20240919"
+    face_limit: 10000
+    texture_quality: "high"
+
+  # Local 3D Models
+  local_3d_models:
+    enabled: true
+    available_models:
+      - name: "hunyuan3d"
+        display_name: "Hunyuan3D-2 full (Docker)"
+        description: "Tencent Hunyuan3D-2 full — высокое качество, ~12GB VRAM"
+        mode: "docker"
+        docker_url: "http://hunyuan3d:8081"
+        api_endpoint: "/generate"
+      - name: "hunyuan3d-mv"
+        display_name: "Hunyuan3D-2 MV (мультивью)"
+        description: "Hunyuan3D-2mv — генерация с нескольких ракурсов, лучшее качество геометрии"
+        mode: "docker"
+        docker_url: "http://hunyuan3d-mv:8081"
+        api_endpoint: "/generate"
+        multiview: true
+      - name: "triposr"
+        display_name: "TripoSR (быстро)"
+        description: "Быстрая генерация, низкое качество"
+        device: "cuda"  # cuda | cpu
+        use_half_precision: true
+      - name: "shap-e"
+        display_name: "Shap-E (качество)"
+        description: "Медленная генерация, высокое качество"
+        device: "cuda"
+        guidance_scale: 15.0
+      - name: "instant3d"
+        display_name: "Instant3D (балансированно)"
+        description: "Баланс скорости и качества"
+        device: "cuda"
+        num_inference_steps: 75
+      - name: "trellis3d"
+        display_name: "Trellis3D (Docker)"
+        description: "High-quality 3D generation via Docker container"
+        mode: "docker"  # docker | local
+        docker_url: "http://localhost:8000"  # URL of Trellis3D Docker service
+        api_endpoint: "/api/generate"
+    default_model: "hunyuan3d"
+
+  # Intelligent Post-Processing
+  postprocessing:
+    enabled: true
+    mode: "intelligent"  # intelligent | manual
+    auto_orient: true
+    generate_supports: true
+    max_overhang_angle: 45.0
+    layer_thickness: 0.2  # mm
+
+    # LLM Reasoning
+    generate_llm_reasoning: true  # Explain decisions via LLM
+
+  printer:
+    build_volume: [220, 220, 250]  # mm [X, Y, Z]
+    nozzle_diameter: 0.4  # mm
+    material: "PLA"
+    material_density: 1.25  # g/cm³
+
+# Enhanced orientation analysis configuration
+orientation_analysis:
+  num_orientations: 24  # 6 | 24 | 48 - number of orientations to test
+  scoring_weights:
+    overhang_angle: 10.0      # Weight for maximum overhang angle
+    overhang_area: 1.0        # Weight for total overhang area
+    support_volume: 0.1       # Weight for estimated support volume
+    print_time: 50.0          # Weight for estimated print time
+    contact_area: -0.5        # Weight for contact area (negative = larger is better)
+    layer_quality: -100.0     # Weight for layer quality score (negative = better is better)
+  print_speed: 50.0  # mm/s for print time estimation
+  layer_height: 0.2  # mm
+
+# MCP Server settings
+mcp:
+  enabled: true
+  port: 3000
+  tools:
+    - generate_3d_model
+    - generate_2d_preview
+    - analyze_printability
+    - plan_scene
+
+paths:
+  output_dir: "./outputs"
+  flux_dir: "./outputs/flux"
+  previews_dir: "./outputs/previews"
+  models_dir: "./outputs/models"
+  temp_dir: "./outputs/temp"
+  cache_dir: "./cache"
+
+logging:
+  level: "INFO"  # DEBUG | INFO | WARNING | ERROR
+  file: "logs/3d_agent.log"
+  console: true
